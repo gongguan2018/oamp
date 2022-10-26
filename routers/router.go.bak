@@ -1,0 +1,63 @@
+package routers
+
+import (
+	"oamp/middleware/jwt"
+	"oamp/middleware/zaplog"
+	api "oamp/routers/api"
+	v1 "oamp/routers/api/v1"
+	v2 "oamp/routers/api/v2"
+
+	"github.com/gin-gonic/gin"
+)
+
+func InitRouter() *gin.Engine {
+	//除了使用gin.Default还可以使用gin.New(),初始化一个Engine实例
+	//	router := gin.Default()
+	router := gin.New()
+	/*
+			定义路由组,"/api/v1"表示路由前缀
+		    router为一个Engine结构体，内部嵌套RouterGroup结构体
+			RouterGroup结构体包含Group、GET、POST、PUT、DELETE、Use等方法
+	*/
+	apiv1 := router.Group("/api/v1")
+	apiv1.Use(jwt.JWT(), zaplog.GinLogger(), zaplog.GinRecovery(true))
+	{
+		//添加系统信息
+		apiv1.POST("/system", v1.AddSystem)
+		//获取指定系统IP信息
+		apiv1.GET("/system/:id", v1.GetSystem)
+		//获取全部IP信息
+		apiv1.GET("system", v1.GetSystem)
+		//修改系统信息
+		apiv1.PUT("/system/:id", v1.EditSystem)
+		//删除系统信息
+		apiv1.DELETE("/system/:id", v1.DeleteSystem)
+		//添加密码本的用户名密码
+		apiv1.POST("/userandpass", v1.AddUserPass)
+		//获取密码本用户名密码
+		apiv1.GET("/userandpass/:ipaddress", v1.GetUserPass)
+		//删除密码本用户名密码
+		apiv1.DELETE("/userandpass/:ipaddress", v1.DeleteUserPass)
+	}
+	apiv2 := router.Group("/api/v2")
+	apiv2.Use(jwt.JWT(), zaplog.GinLogger(), zaplog.GinRecovery(true))
+	{
+		//添加登录系统用户名
+		apiv2.POST("/username", v2.AddUsername)
+		//修改用户信息
+		apiv2.PUT("/username/:id", v2.EditUsername)
+		//删除用户信息
+		apiv2.DELETE("/username/:id", v2.DeleteUsername)
+		//获取用户信息
+		apiv2.GET("/username", v2.GetUsername)
+	}
+	//	router.GET("/auth", api.GetAuth)
+	//定义登录接口
+	router.POST("/user/login", api.GetAuth)
+	//定义退出接口
+	router.POST("/user/logout", api.Logout)
+	//获取用户信息接口,给单个路由添加权限认证中间件
+	router.GET("/user/info", jwt.JWT(), zaplog.GinLogger(), zaplog.GinRecovery(true), api.UserInfo)
+	return router
+	//动态参数也可以有多个，如：/:system/:id/
+}
